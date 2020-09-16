@@ -45,8 +45,16 @@
 
 #include <xcb/shm.h>
 #include <xcb/xcb_image.h>
+#if QT_CONFIG(xcb_render)
 #include <xcb/render.h>
+// 'template' is used as a function argument name in xcb_renderutil.h
+#define template template_param
+// extern "C" is missing too
+extern "C" {
 #include <xcb/xcb_renderutil.h>
+}
+#undef template
+#endif
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -964,13 +972,16 @@ QXcbSystemTrayBackingStore::QXcbSystemTrayBackingStore(QWindow *window)
 
     if (depth != 32) {
         platformWindow->setParentRelativeBackPixmap();
+#if QT_CONFIG(xcb_render)
         initXRenderMode();
+#endif
         m_useGrabbedBackgound = !m_usingXRenderMode;
     }
 }
 
 QXcbSystemTrayBackingStore::~QXcbSystemTrayBackingStore()
 {
+#if QT_CONFIG(xcb_render)
     if (m_xrenderPicture) {
         xcb_render_free_picture(xcb_connection(), m_xrenderPicture);
         m_xrenderPicture = XCB_NONE;
@@ -983,6 +994,7 @@ QXcbSystemTrayBackingStore::~QXcbSystemTrayBackingStore()
         xcb_render_free_picture(xcb_connection(), m_windowPicture);
         m_windowPicture = XCB_NONE;
     }
+#endif // QT_CONFIG(xcb_render)
 }
 
 void QXcbSystemTrayBackingStore::beginPaint(const QRegion &region)
@@ -1004,6 +1016,7 @@ void QXcbSystemTrayBackingStore::render(xcb_window_t window, const QRegion &regi
         return;
     }
 
+#if QT_CONFIG(xcb_render)
     m_image->put(m_xrenderPixmap, region, offset);
     const QRect bounds = region.boundingRect();
     const QPoint target = bounds.topLeft();
@@ -1014,6 +1027,7 @@ void QXcbSystemTrayBackingStore::render(xcb_window_t window, const QRegion &regi
                          m_xrenderPicture, 0, m_windowPicture,
                          target.x(), target.y(), 0, 0, target.x(), target.y(),
                          source.width(), source.height());
+#endif // QT_CONFIG(xcb_render)
 }
 
 void QXcbSystemTrayBackingStore::recreateImage(QXcbWindow *win, const QSize &size)
@@ -1030,6 +1044,7 @@ void QXcbSystemTrayBackingStore::recreateImage(QXcbWindow *win, const QSize &siz
         return;
     }
 
+#if QT_CONFIG(xcb_render)
     if (m_xrenderPicture) {
         xcb_render_free_picture(xcb_connection(), m_xrenderPicture);
         m_xrenderPicture = XCB_NONE;
@@ -1052,8 +1067,10 @@ void QXcbSystemTrayBackingStore::recreateImage(QXcbWindow *win, const QSize &siz
         m_image->resize(size);
     else
         m_image = new QXcbBackingStoreImage(this, size, 32, QImage::Format_ARGB32_Premultiplied);
+#endif // QT_CONFIG(xcb_render)
 }
 
+#if QT_CONFIG(xcb_render)
 void QXcbSystemTrayBackingStore::initXRenderMode()
 {
     if (!connection()->hasXRender())
@@ -1097,5 +1114,6 @@ void QXcbSystemTrayBackingStore::initXRenderMode()
 
     m_usingXRenderMode = true;
 }
+#endif // QT_CONFIG(xcb_render)
 
 QT_END_NAMESPACE

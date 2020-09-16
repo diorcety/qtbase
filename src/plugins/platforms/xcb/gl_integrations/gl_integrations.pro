@@ -1,10 +1,10 @@
 TEMPLATE = subdirs
 QT_FOR_CONFIG += gui-private
 
-qtConfig(xcb-egl-plugin) {
+qtConfig(egl):qtConfig(egl_x11):qtConfig(opengl) {
     SUBDIRS += xcb_egl
 }
 
-qtConfig(xcb-glx-plugin) {
+qtConfig(xcb-xlib):qtConfig(opengl):!qtConfig(opengles2) {
     SUBDIRS += xcb_glx
 }

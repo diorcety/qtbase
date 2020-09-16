@@ -66,10 +66,14 @@
 #include <errno.h>
 
 #include <xcb/xfixes.h>
+#if QT_CONFIG(xkb)
 #define explicit dont_use_cxx_explicit
 #include <xcb/xkb.h>
 #undef explicit
+#endif
+#if QT_CONFIG(xcb_xinput)
 #include <xcb/xinput.h>
+#endif
 
 QT_BEGIN_NAMESPACE
 
@@ -83,6 +87,12 @@ Q_LOGGING_CATEGORY(lcQpaPeeker, "qt.qpa.peeker")
 Q_LOGGING_CATEGORY(lcQpaKeyboard, "qt.qpa.xkeyboard")
 Q_LOGGING_CATEGORY(lcQpaClipboard, "qt.qpa.clipboard")
 Q_LOGGING_CATEGORY(lcQpaXDnd, "qt.qpa.xdnd")
+
+// this event type was added in libxcb 1.10,
+// but we support also older version
+#ifndef XCB_GE_GENERIC
+#define XCB_GE_GENERIC 35
+#endif
 
 QXcbConnection::QXcbConnection(QXcbNativeInterface *nativeInterface, bool canGrabServer, xcb_visualid_t defaultVisualId, const char *displayName)
     : QXcbBasicConnection(displayName)
@@ -102,10 +112,12 @@ QXcbConnection::QXcbConnection(QXcbNativeInterface *nativeInterface, bool canGra
 
     initializeScreens();
 
+#if QT_CONFIG(xcb_xinput)
     if (hasXInput2()) {
         xi2SetupDevices();
         xi2SelectStateEvents();
     }
+#endif
 
     m_wmSupport.reset(new QXcbWMSupport(this));
     m_keyboard = new QXcbKeyboard(this);
@@ -506,6 +518,7 @@ Qt::MouseButton QXcbConnection::translateMouseButton(xcb_button_t s)
     }
 }
 
+#if QT_CONFIG(xkb)
 namespace {
     typedef union {
         /* All XKB events share these fields. */
@@ -521,6 +534,7 @@ namespace {
         xcb_xkb_state_notify_event_t state_notify;
     } _xkb_event;
 }
+#endif
 
 void QXcbConnection::handleXcbEvent(xcb_generic_event_t *event)
 {
@@ -597,12 +611,16 @@ void QXcbConnection::handleXcbEvent(xcb_generic_event_t *event)
         HANDLE_PLATFORM_WINDOW_EVENT(xcb_client_message_event_t, window, handleClientMessageEvent);
     }
     case XCB_ENTER_NOTIFY:
+#if QT_CONFIG(xcb_xinput)
         if (hasXInput2() && !xi2MouseEventsDisabled())
             break;
+#endif
         HANDLE_PLATFORM_WINDOW_EVENT(xcb_enter_notify_event_t, event, handleEnterNotifyEvent);
     case XCB_LEAVE_NOTIFY:
+#if QT_CONFIG(xcb_xinput)
         if (hasXInput2() && !xi2MouseEventsDisabled())
             break;
+#endif
         m_keyboard->updateXKBStateFromCore(reinterpret_cast<xcb_leave_notify_event_t *>(event)->state);
         HANDLE_PLATFORM_WINDOW_EVENT(xcb_leave_notify_event_t, event, handleLeaveNotifyEvent);
     case XCB_FOCUS_IN:
@@ -664,11 +682,13 @@ void QXcbConnection::handleXcbEvent(xcb_generic_event_t *event)
         }
         break;
     }
+#if QT_CONFIG(xcb_xinput)
     case XCB_GE_GENERIC:
         // Here the windowEventListener is invoked from xi2HandleEvent()
         if (hasXInput2() && isXIEvent(event))
             xi2HandleEvent(reinterpret_cast<xcb_ge_event_t *>(event));
         break;
+#endif
     default:
         handled = false; // event type not recognized
         break;
@@ -692,6 +712,7 @@ void QXcbConnection::handleXcbEvent(xcb_generic_event_t *event)
         auto change_event = reinterpret_cast<xcb_randr_screen_change_notify_event_t *>(event);
         if (auto virtualDesktop = virtualDesktopForRootWindow(change_event->root))
             virtualDesktop->handleScreenChange(change_event);
+#if QT_CONFIG(xkb)
     } else if (isXkbType(response_type)) {
         auto xkb_event = reinterpret_cast<_xkb_event *>(event);
         if (xkb_event->any.deviceID == m_keyboard->coreDeviceId()) {
@@ -714,6 +735,7 @@ void QXcbConnection::handleXcbEvent(xcb_generic_event_t *event)
                     break;
             }
         }
+#endif
     } else {
         handled = false; // event type still not recognized
     }
@@ -890,6 +912,7 @@ bool QXcbConnection::compressEvent(xcb_generic_event_t *event) const
         });
     }
 
+#if QT_CONFIG(xcb_xinput)
     // compress XI_* events
     if (responseType == XCB_GE_GENERIC) {
         if (!hasXInput2())
@@ -925,6 +948,7 @@ bool QXcbConnection::compressEvent(xcb_generic_event_t *event) const
 
         return false;
     }
+#endif
 
     if (responseType == XCB_CONFIGURE_NOTIFY) {
         // compress multiple configure notify events for the same window
@@ -954,6 +978,7 @@ bool QXcbConnection::isUserInputEvent(xcb_generic_event_t *event) const
     if (isInputEvent)
         return true;
 
+#if QT_CONFIG(xcb_xinput)
     if (connection()->hasXInput2()) {
         isInputEvent = isXIType(event, XCB_INPUT_BUTTON_PRESS) ||
                        isXIType(event, XCB_INPUT_BUTTON_RELEASE) ||
@@ -968,6 +993,7 @@ bool QXcbConnection::isUserInputEvent(xcb_generic_event_t *event) const
     }
     if (isInputEvent)
         return true;
+#endif
 
     if (eventType == XCB_CLIENT_MESSAGE) {
         auto clientMessage = reinterpret_cast<const xcb_client_message_event_t *>(event);

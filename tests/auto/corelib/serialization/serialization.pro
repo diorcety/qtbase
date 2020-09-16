@@ -11,8 +11,7 @@ SUBDIRS = \
     qxmlstream
 
 !qtHaveModule(gui): SUBDIRS -= \
-    qdatastream \
-    qdatastream_core_pixmap
+    qdatastream
 
 !qtHaveModule(network): SUBDIRS -= \
     qtextstream
