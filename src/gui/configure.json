@@ -41,11 +41,14 @@
             "sm": { "type": "boolean", "name": "sessionmanager" },
             "tslib": "boolean",
             "vulkan": "boolean",
-            "xcb": "boolean",
-            "bundled-xcb-xinput": "boolean",
+            "xcb": { "type": "enum", "values": [ "no", "yes", "qt", "system" ] },
             "xcb-native-painting": "boolean",
             "xcb-xlib": "boolean",
-            "xkbcommon": "boolean"
+            "xcb-xinput": "boolean",
+            "xkb": "boolean",
+            "xkbcommon": { "type": "enum", "values": [ "no", "qt", "system" ] },
+            "xkbcommon-evdev": "boolean",
+            "xkbcommon-x11": { "type": "enum", "name": "xkbcommon", "values": [ "no", "qt", "system" ] }
         }
     },
 
@@ -573,114 +576,45 @@
             ]
         },
         "xcb": {
-            "label": "XCB >= 1.11",
+            "label": "XCB >= 1.9 (core)",
             "test": {
                 "main": [
                     "int primaryScreen = 0;",
                     "(void)xcb_connect(\"\", &primaryScreen);",
-                    "/* XCB_PACKED define was added in libxcb 1.11 */",
-                    "#ifdef XCB_PACKED",
-                    "    return 0;",
-                    "#else",
-                    "    return -1;",
-                    "#endif"
+                    "// This won't compile unless libxcb >= 1.9 which defines XCB_CONN_CLOSED_INVALID_SCREEN.",
+                    "int xcbScreenError = XCB_CONN_CLOSED_INVALID_SCREEN;"
                 ]
             },
             "headers": "xcb/xcb.h",
             "sources": [
-                { "type": "pkgConfig", "args": "xcb >= 1.11" },
+                { "type": "pkgConfig", "args": "xcb >= 1.9" },
                 "-lxcb"
             ]
         },
-        "xcb_icccm": {
-            "label": "XCB ICCCM >= 0.3.9",
-            "headers": "xcb/xcb_icccm.h",
+        "xcb_syslibs": {
+            "label": "XCB (extensions)",
+            "test": {
+                "include": [
+                    "xcb/xcb.h",
+                    "xcb/xfixes.h",
+                    "xcb/xcb_image.h",
+                    "xcb/xcb_keysyms.h",
+                    "xcb/xinerama.h",
+                    "xcb/sync.h",
+                    "xcb/randr.h",
+                    "xcb/shm.h",
+                    "xcb/xcb_icccm.h"
+                ],
+                "main": [
+                    "int primaryScreen = 0;",
+                    "(void) xcb_connect(\"\", &primaryScreen);"
+                ]
+            },
             "sources": [
-                { "type": "pkgConfig", "args": "xcb-icccm >= 0.3.9" },
-                "-lxcb-icccm"
-            ],
-            "use": "xcb"
-        },
-        "xcb_image": {
-            "label": "XCB Image >= 0.3.9",
-            "headers": "xcb/xcb_image.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-image >= 0.3.9" },
-                "-lxcb-image"
-            ],
-            "use": "xcb_shm xcb"
-        },
-        "xcb_keysyms": {
-            "label": "XCB Keysyms >= 0.3.9",
-            "headers": "xcb/xcb_keysyms.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-keysyms >= 0.3.9" },
-                "-lxcb-keysyms"
-            ],
-            "use": "xcb"
-        },
-        "xcb_renderutil": {
-            "label": "XCB Renderutil >= 0.3.9",
-            "headers": "xcb/xcb_renderutil.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-renderutil >= 0.3.9" },
-                "-lxcb-render-util"
-            ],
-            "use": "xcb xcb_render"
-        },
-        "xcb_randr": {
-            "label": "XCB RandR",
-            "headers": "xcb/randr.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-randr" },
-                "-lxcb-randr"
-            ],
-            "use": "xcb"
-        },
-        "xcb_shape": {
-            "label": "XCB Shape",
-            "headers": "xcb/shape.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-shape" },
-                "-lxcb-shape"
-            ],
-            "use": "xcb"
-        },
-        "xcb_shm": {
-            "label": "XCB SHM",
-            "headers": "xcb/shm.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-shm" },
-                "-lxcb-shm"
-            ],
-            "use": "xcb"
-        },
-        "xcb_sync": {
-            "label": "XCB Sync",
-            "headers": "xcb/sync.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-sync" },
-                "-lxcb-sync"
-            ],
-            "use": "xcb"
-        },
-        "xcb_xfixes": {
-            "label": "XCB Xfixes",
-            "headers": "xcb/xfixes.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-xfixes" },
-                "-lxcb-xfixes"
-            ],
-            "use": "xcb"
-        },
-        "xcb_xinerama": {
-            "label": "XCB Xinerama",
-            "headers": "xcb/xinerama.h",
-            "sources": [
-                { "type": "pkgConfig", "args": "xcb-xinerama" },
-                "-lxcb-xinerama"
-            ],
-            "use": "xcb"
+                { "type": "pkgConfig",
+                  "args": "xcb xcb-shm xcb-sync xcb-xfixes xcb-xinerama xcb-randr xcb-image xcb-keysyms xcb-icccm xcb-shape" },
+                "-lxcb -lxcb-shm -lxcb-sync -lxcb-xfixes -lxcb-xinerama -lxcb-randr -lxcb-image -lxcb-keysyms -lxcb-icccm -lxcb-shape"
+            ]
         },
         "xcb_xlib": {
             "label": "XCB Xlib",
@@ -695,20 +629,54 @@
             "use": "xcb xlib"
         },
         "xcb_xkb": {
-            "label": "XCB XKB",
+            "label": "XCB XKB >= 1.10",
+            "test": {
+                "head": [
+                    "// xkb.h is using a variable called 'explicit', which is a reserved keyword in C++",
+                    "#define explicit dont_use_cxx_explicit"
+                ],
+                "tail": "#undef explicit",
+                "main": [
+                    "// This takes more arguments in xcb-xkb < 1.10.",
+                    "xcb_xkb_get_kbd_by_name_unchecked(NULL, 0, 0, 0, 0);"
+                ]
+            },
             "headers": "xcb/xkb.h",
             "sources": [
-                { "type": "pkgConfig", "args": "xcb-xkb" },
+                { "type": "pkgConfig", "args": "xcb-xkb >= 1.10" },
                 "-lxcb-xkb"
             ],
             "use": "xcb"
         },
         "xcb_render": {
             "label": "XCB XRender",
+            "test": {
+                "tail": [
+                    "// 'template' is used as a function argument name in xcb_renderutil.h",
+                    "#define template template_param",
+                    "// extern \"C\" is missing, too",
+                    "extern \"C\" {",
+                    "#include <xcb/xcb_renderutil.h>",
+                    "}",
+                    "#undef template"
+                ],
+                "main": [
+                    "int primaryScreen = 0;",
+                    "xcb_generic_error_t *error = 0;",
+                    "xcb_connection_t *connection = 0;",
+                    "xcb_render_query_pict_formats_cookie_t formatsCookie =",
+                    "    xcb_render_query_pict_formats(connection);",
+                    "xcb_render_query_pict_formats_reply_t *formatsReply =",
+                    "    xcb_render_query_pict_formats_reply(",
+                    "            connection, formatsCookie, &error);",
+                    "xcb_render_util_find_standard_format(",
+                    "        formatsReply, XCB_PICT_STANDARD_ARGB_32);"
+                ]
+            },
             "headers": "xcb/render.h",
             "sources": [
-                { "type": "pkgConfig", "args": "xcb-render" },
-                "-lxcb-render"
+                { "type": "pkgConfig", "args": "xcb-renderutil xcb-render" },
+                "-lxcb-render-util -lxcb-render"
             ],
             "use": "xcb"
         },
@@ -716,6 +684,7 @@
             "label": "XCB GLX",
             "test": {
                 "main": [
+                    "int primaryScreen = 0;",
                     "xcb_connection_t *connection = 0;",
                     "xcb_generic_error_t *error = 0;",
                     "xcb_glx_query_version_cookie_t xglx_query_cookie = xcb_glx_query_version(",
@@ -749,25 +718,22 @@
             "use": "xcb"
         },
         "xkbcommon": {
-            "label": "xkbcommon >= 0.5.0",
+            "label": "xkbcommon",
+            "export": "xkbcommon_evdev",
             "test": {
+                "include": [ "xkbcommon/xkbcommon.h", "xkbcommon/xkbcommon-keysyms.h", "xkbcommon/xkbcommon-names.h" ],
                 "main": "xkb_context_new(XKB_CONTEXT_NO_FLAGS);"
             },
             "headers": [ "xkbcommon/xkbcommon.h" ],
             "sources": [
-                { "type": "pkgConfig", "args": "xkbcommon >= 0.5.0" },
-                "-lxkbcommon"
+                { "type": "pkgConfig", "args": "xkbcommon" }
             ]
         },
         "xkbcommon_x11": {
-            "label": "xkbcommon-x11",
-            "test": {
-                "main": "xkb_x11_setup_xkb_extension_flags flag = XKB_X11_SETUP_XKB_EXTENSION_NO_FLAGS;"
-            },
-            "headers": [ "xkbcommon/xkbcommon-x11.h" ],
+            "label": "xkbcommon-x11 >= 0.4.1",
+            "export": "xkbcommon",
             "sources": [
-                { "type": "pkgConfig", "args": "xkbcommon-x11" },
-                "-lxkbcommon -lxkbcommon-x11"
+                { "type": "pkgConfig", "args": "xkbcommon xkbcommon-x11 >= 0.4.1" }
             ]
         },
         "xrender": {
@@ -1044,50 +1010,6 @@
             "label": "default QPA platform",
             "type": "qpaDefaultPlatform",
             "log": "value"
-        },
-        "xcb_syslibs": {
-            "label": "XCB (extensions)",
-            "type": "compile",
-            "test": {
-                "head": [
-                    "// xkb.h is using a variable called 'explicit', which is a reserved keyword in C++",
-                    "#define explicit dont_use_cxx_explicit"
-                ],
-                "tail": "#undef explicit",
-                "include": [
-                    "xcb/xcb.h",
-                    "xcb/xcb_image.h",
-                    "xcb/xcb_keysyms.h",
-                    "xcb/randr.h",
-                    "xcb/render.h",
-                    "xcb/shape.h",
-                    "xcb/shm.h",
-                    "xcb/sync.h",
-                    "xcb/xfixes.h",
-                    "xcb/xinerama.h",
-                    "xcb/xcb_icccm.h",
-                    "xcb/xcb_renderutil.h",
-                    "xcb/xkb.h"
-                ],
-                "main": [
-                    "int primaryScreen = 0;",
-                    "xcb_connection_t *c = xcb_connect(\"\", &primaryScreen);",
-
-                    "/* RENDER */",
-                    "xcb_generic_error_t *error = nullptr;",
-                    "xcb_render_query_pict_formats_cookie_t formatsCookie =",
-                    "    xcb_render_query_pict_formats(c);",
-                    "xcb_render_query_pict_formats_reply_t *formatsReply =",
-                    "    xcb_render_query_pict_formats_reply(c, formatsCookie, &error);",
-
-                    "/* RENDERUTIL: xcb_renderutil.h include won't compile unless version >= 0.3.9 */",
-                    "xcb_render_util_find_standard_format(nullptr, XCB_PICT_STANDARD_ARGB_32);",
-
-                    "/* XKB: This takes more arguments in xcb-xkb < 1.11 */",
-                    "xcb_xkb_get_kbd_by_name_replies_key_names_value_list_sizeof(nullptr, 0, 0, 0, 0, 0, 0, 0, 0);"
-                ]
-            },
-            "use": "xcb_icccm xcb_image xcb_keysyms xcb_randr xcb_render xcb_renderutil xcb_shape xcb_shm xcb_sync xcb_xfixes xcb_xinerama xcb_xkb xcb"
         },
         "x11prefix": {
             "label": "X11 prefix",
@@ -1516,7 +1438,16 @@
             "label": "XCB",
             "section": "Platform plugins",
             "autoDetect": "!config.darwin",
-            "condition": "features.thread && libs.xcb && tests.xcb_syslibs && features.xkbcommon-x11",
+            "enable": "input.xcb == 'system' || input.xcb == 'qt' || input.xcb == 'yes'",
+            "condition": "features.thread && libs.xcb",
+            "output": [ "privateFeature" ]
+        },
+        "system-xcb": {
+            "label": "Using system-provided XCB libraries",
+            "enable": "input.xcb == 'system'",
+            "disable": "input.xcb == 'qt'",
+            "autoDetect": "!config.darwin",
+            "condition": "features.xcb && libs.xcb_syslibs",
             "output": [ "privateFeature" ]
         },
         "x11-prefix": {
@@ -1524,22 +1455,10 @@
             "emitIf": "features.xcb",
             "output": [ { "type": "varAssign", "name": "QMAKE_X11_PREFIX", "value": "tests.x11prefix.value" } ]
         },
-        "xcb-glx-plugin": {
-            "label": "GLX Plugin",
-            "emitIf": "features.xcb",
-            "condition": "features.xcb-xlib && features.opengl && !features.opengles2",
-            "output": [ "privateFeature" ]
-        },
         "xcb-glx": {
-            "label": "  XCB GLX",
-            "emitIf": "features.xcb && features.xcb-glx-plugin",
-            "condition": "libs.xcb_glx",
-            "output": [ "privateFeature" ]
-        },
-        "xcb-egl-plugin": {
-            "label": "EGL-X11 Plugin",
+            "label": "XCB GLX",
             "emitIf": "features.xcb",
-            "condition": "features.egl_x11 && features.opengl",
+            "condition": "libs.xcb_glx",
             "output": [ "privateFeature" ]
         },
         "xcb-native-painting": {
@@ -1555,6 +1474,18 @@
             "condition": "features.xcb-native-painting",
             "output": [ "privateFeature" ]
         },
+        "xcb-render": {
+            "label": "XCB render",
+            "emitIf": "features.xcb",
+            "condition": "!features.system-xcb || libs.xcb_render",
+            "output": [ "privateFeature" ]
+        },
+        "xkb": {
+            "label": "XCB XKB",
+            "emitIf": "features.xcb",
+            "condition": "!features.system-xcb || libs.xcb_xkb",
+            "output": [ "privateFeature" ]
+        },
         "xcb-xlib": {
             "label": "XCB Xlib",
             "condition": "features.xlib && libs.xcb_xlib",
@@ -1566,22 +1497,23 @@
             "condition": "features.sessionmanager && libs.x11sm",
             "output": [ "privateFeature" ]
         },
-        "system-xcb-xinput": {
-            "label": "Using system-provided xcb-xinput",
+        "xcb-xinput": {
+            "label": "XCB XInput",
             "emitIf": "features.xcb",
-            "disable": "input.bundled-xcb-xinput == 'yes'",
-            "enable": "input.bundled-xcb-xinput == 'no'",
-            "condition": "libs.xcb_xinput",
+            "condition": "!features.system-xcb || libs.xcb_xinput",
             "output": [ "privateFeature" ]
         },
-        "xkbcommon": {
-            "label": "xkbcommon",
+        "xkbcommon-evdev": {
+            "label": "xkbcommon-evdev",
             "condition": "libs.xkbcommon",
             "output": [ "privateFeature" ]
         },
-        "xkbcommon-x11": {
-            "label": "xkbcommon-x11",
-            "condition": "features.xkbcommon && libs.xkbcommon_x11",
+        "xkbcommon-system": {
+            "label": "Using system-provided xkbcommon",
+            "emitIf": "features.xcb",
+            "enable": "input.xkbcommon == 'system'",
+            "disable": "input.xkbcommon == 'qt' || input.xkbcommon == 'no'",
+            "condition": "libs.xkbcommon_x11",
             "output": [ "privateFeature" ]
         },
         "xlib": {
@@ -1825,7 +1757,7 @@
         {
             "type": "error",
             "condition": "input.xcb != '' && input.xcb != 'no' && input.xkbcommon == 'no'",
-            "message": "XCB plugin requires xkbcommon and xkbcommon-x11, but -no-xkbcommon was provided."
+            "message": "XCB plugin requires libxkbcommon. See -qt-xkbcommon-x11 and -system-xkbcommon-x11."
         }
     ],
 
@@ -1941,16 +1873,7 @@ QMAKE_LIBDIR_OPENGL[_ES2] and QMAKE_LIBS_OPENGL[_ES2] in the mkspec for your pla
                 "integrityhid",
                 "mtdev",
                 "tslib",
-                "xkbcommon",
-                {
-                    "section": "X11 specific",
-                    "entries": [
-                        "xlib",
-                        "xcb-xlib",
-                        "egl_x11",
-                        "xkbcommon-x11"
-                    ]
-                }
+                "xkbcommon-evdev"
             ]
         },
         {
@@ -1978,18 +1901,10 @@ QMAKE_LIBDIR_OPENGL[_ES2] and QMAKE_LIBS_OPENGL[_ES2] in the mkspec for your pla
                     ]
                 },
                 {
-                    "section": "XCB",
+                    "section": "X11",
                     "condition": "features.xcb",
                     "entries": [
-                        "system-xcb-xinput", "xcb-native-painting",
-                        {
-                            "section": "GL integrations",
-                            "entries": [
-                                "xcb-glx-plugin",
-                                "xcb-glx",
-                                "xcb-egl-plugin"
-                            ]
-                        }
+                        "system-xcb", "egl_x11", "xkb", "xlib", "xcb-render", "xcb-glx", "xcb-xinput", "xcb-xlib", "xkbcommon-system", "xcb-native-painting"
                     ]
                 },
                 {

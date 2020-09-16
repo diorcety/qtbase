@@ -43,9 +43,7 @@
 #include <QtCore/QPoint>
 #include <QtCore/QTimer>
 
-#include <QtGui/private/qtguiglobal_p.h>
-
-#if QT_CONFIG(xkbcommon)
+#ifndef QT_NO_XKBCOMMON_EVDEV
 #include <xkbcommon/xkbcommon.h>
 #endif
 
@@ -72,16 +70,17 @@ public:
 
     void processKey(libinput_event_keyboard *e);
 
-#if QT_CONFIG(xkbcommon)
+#ifndef QT_NO_XKBCOMMON_EVDEV
     void handleRepeat();
 
 private:
     int keysymToQtKey(xkb_keysym_t key) const;
     int keysymToQtKey(xkb_keysym_t keysym, Qt::KeyboardModifiers *modifiers, const QString &text) const;
 
-    xkb_context *m_ctx = nullptr;
-    xkb_keymap *m_keymap = nullptr;
-    xkb_state *m_state = nullptr;
+    xkb_context *m_ctx;
+    xkb_keymap *m_keymap;
+    xkb_state *m_state;
+    xkb_mod_index_t m_modindex[4];
 
     QTimer m_repeatTimer;
 
@@ -94,6 +93,7 @@ private:
         QString unicodeText;
         int repeatCount;
     } m_repeatData;
+    Qt::KeyboardModifiers m_mods;
 #endif
 };
 
